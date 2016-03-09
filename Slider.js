@@ -6,8 +6,10 @@ var {
   StyleSheet,
   PanResponder,
   View,
-  Platform
-} = React;
+  Platform,
+  TouchableHighlight,
+  Text,
+  } = React;
 
 var TRACK_SIZE = 4;
 var THUMB_SIZE = 20;
@@ -19,11 +21,11 @@ function Rect(x, y, width, height) {
   this.height = height;
 }
 
-Rect.prototype.containsPoint = function(x, y) {
+Rect.prototype.containsPoint = function (x, y) {
   return (x >= this.x
-          && y >= this.y
-          && x <= this.x + this.width
-          && y <= this.y + this.height);
+  && y >= this.y
+  && x <= this.x + this.width
+  && y <= this.y + this.height);
 };
 
 var Slider = React.createClass({
@@ -38,7 +40,7 @@ var Slider = React.createClass({
      */
     value: PropTypes.number,
 
-    /**
+    /*
      * Initial minimum value of the slider. Default value is 0.
      */
     minimumValue: PropTypes.number,
@@ -112,12 +114,19 @@ var Slider = React.createClass({
      * Set this to true to visually see the thumb touch rect in green.
      */
     debugTouchArea: PropTypes.bool,
+
+
+    /**
+     * Step should be an integer positive value that min and max can be divided by without a remainer
+     */
+    step: PropTypes.number,
   },
   getInitialState() {
     return {
-      containerSize: { width: 0, height: 0 },
-      trackSize: { width: 0, height: 0 },
-      thumbSize: { width: 0, height: 0 },
+      containerSize: {width: 0, height: 0},
+      trackSize: {width: 0, height: 0},
+      thumbSize: {width: 0, height: 0},
+
       previousLeft: 0,
       value: this.props.value,
     };
@@ -131,7 +140,7 @@ var Slider = React.createClass({
       maximumTrackTintColor: '#b3b3b3',
       thumbTintColor: '#343434',
       thumbTouchSize: {width: 40, height: 40},
-      debugTouchArea: false,
+      debugTouchArea: true,
     };
   },
   componentWillMount() {
@@ -144,7 +153,7 @@ var Slider = React.createClass({
       onPanResponderTerminate: this._handlePanResponderEnd,
     });
   },
-  componentWillReceiveProps: function(nextProps) {
+  componentWillReceiveProps: function (nextProps) {
     this.setState({value: nextProps.value});
   },
   render() {
@@ -157,15 +166,17 @@ var Slider = React.createClass({
       trackStyle,
       thumbStyle,
       debugTouchArea,
+      measureNumbers,
+      measureMarks,
       ...other
-    } = this.props;
+      } = this.props;
     var {value, containerSize, trackSize, thumbSize} = this.state;
     var mainStyles = styles || defaultStyles;
     var thumbLeft = this._getThumbLeft(value);
     var valueVisibleStyle = {};
     if (containerSize.width === undefined
-        || trackSize.width === undefined
-        || thumbSize.width === undefined) {
+      || trackSize.width === undefined
+      || thumbSize.width === undefined) {
       valueVisibleStyle.opacity = 0;
     }
 
@@ -183,12 +194,46 @@ var Slider = React.createClass({
 
     var touchOverflowStyle = this._getTouchOverflowStyle();
 
+    /* generate step */
+    var measures = [];
+    // create tickmarks to insert later
+    if (this.props.step)
+    // generate track marks
+    {
+      var numberOfMeasures = (this.props.maximumValue - this.props.minimumValue) / this.props.step;
+      for (var i = 0; i <= numberOfMeasures; i++) {
+        measures.push(
+          <TouchableHighlight
+            key={"h1"+i}
+
+            onPress={this._handlePressButton.bind( this, i*this.props.step)}
+
+
+            ><View key={"v1"+i} style={{
+            height: 20,
+            alignItems: "center",
+            flexDirection: "column",
+
+          width: trackSize.width/(numberOfMeasures+1),
+
+            backgroundColor:"blue"
+        }}>
+            <Text key={"t1"+i}
+                  style={[mainStyles.measureNumbers, measureNumbers]}>{i * this.props.step + this.props.minimumValue}</Text>
+            <View key={"v2"+i} style={[mainStyles.measureMarks, measureMarks]}
+              />
+          </View></TouchableHighlight>);
+      }
+    }
+
+
     return (
-      <View {...other} style={[mainStyles.container, style]} onLayout={this._measureContainer}>
+      <View {...other} style={[mainStyles.container, style, {paddingTop:20}]} onLayout={this._measureContainer}>
+
         <View
           style={[{backgroundColor: maximumTrackTintColor}, mainStyles.track, trackStyle]}
-          onLayout={this._measureTrack} />
-        <View style={[mainStyles.track, trackStyle, minimumTrackStyle]} />
+          onLayout={this._measureTrack}/>
+        <View style={[mainStyles.track, trackStyle, minimumTrackStyle]}/>
         <View
           ref={(thumb) => this.thumb = thumb}
           onLayout={this._measureThumb}
@@ -196,17 +241,37 @@ var Slider = React.createClass({
             {backgroundColor: thumbTintColor, marginTop: -(trackSize.height + thumbSize.height) / 2},
             mainStyles.thumb, thumbStyle, {left: thumbLeft, ...valueVisibleStyle}
           ]}
-        />
+          />
         <View
           style={[defaultStyles.touchArea, touchOverflowStyle]}
           {...this._panResponder.panHandlers}>
           {debugTouchArea === true && this._renderDebugThumbTouchRect()}
         </View>
+        {/* container for tickmarks*/}
+        <View style={[{ height: 16, marginLeft: -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2),
+         marginRight:  -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2), marginTop: -thumbSize.height, marginBottom: 10,flexDirection: "row",
+            alignItems: "flex-start", justifyContent: "space-between"}]}>{measures}</View>
       </View>
     );
   },
 
-  _handleStartShouldSetPanResponder: function(e: Object, /*gestureState: Object*/): boolean {
+
+  _getValueWithStep(value)
+  {
+    //if the step is specified -- get the rounded value otherwise get real value
+    return (this.props.step) ? Math.round(value / this.props.step) * this.props.step : value;
+
+  },
+
+  _handlePressButton: function (value) {
+    //if the user clicks on one of the measures -- set value to the measure value
+
+    this.setState({value: value},
+      this._fireChangeEvent.bind(this, 'onSlidingComplete'));
+  },
+
+
+  _handleStartShouldSetPanResponder: function (e:Object, /*gestureState: Object*/):boolean {
     // Until the PR https://github.com/facebook/react-native/pull/3426 is merged, we need to always return "true" for android
     if (Platform.OS === 'android') {
       return true;
@@ -215,52 +280,54 @@ var Slider = React.createClass({
     return this._thumbHitTest(e);
   },
 
-  _handleMoveShouldSetPanResponder: function(/*e: Object, gestureState: Object*/): boolean {
+  _handleMoveShouldSetPanResponder: function (/*e: Object, gestureState: Object*/):boolean {
     // Should we become active when the user moves a touch over the thumb?
     return false;
   },
 
-  _handlePanResponderGrant: function(/*e: Object, gestureState: Object*/) {
-    this.setState({ previousLeft: this._getThumbLeft(this.state.value) },
+  _handlePanResponderGrant: function (/*e: Object, gestureState: Object*/) {
+    this.setState({previousLeft: this._getThumbLeft(this.state.value)},
       this._fireChangeEvent.bind(this, 'onSlidingStart'));
   },
-  _handlePanResponderMove: function(e: Object, gestureState: Object) {
-    this.setState({ value: this._getValue(gestureState) },
+  _handlePanResponderMove: function (e:Object, gestureState:Object) {
+    this.setState({value: this._getValue(gestureState)},
       this._fireChangeEvent.bind(this, 'onValueChange'));
   },
-  _handlePanResponderEnd: function(e: Object, gestureState: Object) {
-    this.setState({ value: this._getValue(gestureState) },
+  _handlePanResponderEnd: function (e:Object, gestureState:Object) {
+    var val = this._getValueWithStep(this._getValue(gestureState));
+    this.setState({value: val},
       this._fireChangeEvent.bind(this, 'onSlidingComplete'));
   },
 
-  _measureContainer(x: Object) {
+  _measureContainer(x:Object) {
     var {width, height} = x.nativeEvent.layout;
     var containerSize = {width: width, height: height};
-    this.setState({ containerSize: containerSize });
+    this.setState({containerSize: containerSize});
   },
 
-  _measureTrack(x: Object) {
+  _measureTrack(x:Object) {
     var {width, height} = x.nativeEvent.layout;
     var trackSize = {width: width, height: height};
-    this.setState({ trackSize: trackSize });
+    this.setState({trackSize: trackSize});
   },
 
-  _measureThumb(x: Object) {
+  _measureThumb(x:Object) {
     var {width, height} = x.nativeEvent.layout;
     var thumbSize = {width: width, height: height};
-    this.setState({ thumbSize: thumbSize });
+    this.setState({thumbSize: thumbSize});
   },
 
-  _getRatio(value: number) {
+
+  _getRatio(value:number) {
     return (value - this.props.minimumValue) / (this.props.maximumValue - this.props.minimumValue);
   },
 
-  _getThumbLeft(value: number) {
+  _getThumbLeft(value:number) {
     var ratio = this._getRatio(value);
     return ratio * (this.state.containerSize.width - this.state.thumbSize.width);
   },
 
-  _getValue(gestureState: Object) {
+  _getValue(gestureState:Object) {
     var length = this.state.containerSize.width - this.state.thumbSize.width;
     var thumbLeft = Math.min(length,
       Math.max(0, this.state.previousLeft + gestureState.dx));
@@ -281,7 +348,7 @@ var Slider = React.createClass({
 
     var size = {};
     if (state.containerSize.width !== undefined
-        && state.thumbSize.width !== undefined) {
+      && state.thumbSize.width !== undefined) {
 
       size.width = Math.max(0, props.thumbTouchSize.width - state.thumbSize.width);
       size.height = Math.max(0, props.thumbTouchSize.height - state.containerSize.height);
@@ -312,7 +379,7 @@ var Slider = React.createClass({
     return touchOverflowStyle;
   },
 
-  _thumbHitTest(e: Object) {
+  _thumbHitTest(e:Object) {
     var nativeEvent = e.nativeEvent;
     var thumbTouchRect = this._getThumbTouchRect();
     return thumbTouchRect.containsPoint(nativeEvent.locationX, nativeEvent.locationY);
@@ -344,7 +411,7 @@ var Slider = React.createClass({
       <View
         style={[defaultStyles.debugThumbTouchArea, positionStyle]}
         pointerEvents='none'
-      />
+        />
     );
   }
 });
@@ -368,7 +435,7 @@ var defaultStyles = StyleSheet.create({
   touchArea: {
     position: 'absolute',
     backgroundColor: 'transparent',
-    top: 0,
+    top: 20,
     left: 0,
     right: 0,
     bottom: 0,
@@ -377,7 +444,20 @@ var defaultStyles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'green',
     opacity: 0.5,
+  },
+  measureNumbers: {
+    textAlign: "center",
+    fontSize: 9
+  },
+
+  measureMarks: {
+    width: 6,
+    height: 6,
+    marginTop: 10,
+    backgroundColor: "#ccc",
+    borderRadius: 3
   }
 });
+
 
 module.exports = Slider;
