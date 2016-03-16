@@ -13,6 +13,7 @@ var {
 
 var TRACK_SIZE = 4;
 var THUMB_SIZE = 20;
+var STEPS_HEIGHT=15;
 
 function Rect(x, y, width, height) {
   this.x = x;
@@ -140,7 +141,7 @@ var Slider = React.createClass({
       maximumTrackTintColor: '#b3b3b3',
       thumbTintColor: '#343434',
       thumbTouchSize: {width: 40, height: 40},
-      debugTouchArea: true,
+      debugTouchArea: false,
     };
   },
   componentWillMount() {
@@ -203,32 +204,31 @@ var Slider = React.createClass({
       var numberOfMeasures = (this.props.maximumValue - this.props.minimumValue) / this.props.step;
       for (var i = 0; i <= numberOfMeasures; i++) {
         measures.push(
-          <TouchableHighlight
-            key={"h1"+i}
-
-            onPress={this._handlePressButton.bind( this, i*this.props.step)}
-
-
-            ><View key={"v1"+i} style={{
-            height: 20,
+        <View key={"v1"+i} style={{
+            height: STEPS_HEIGHT,
             alignItems: "center",
             flexDirection: "column",
 
           width: trackSize.width/(numberOfMeasures+1),
 
-            backgroundColor:"blue"
-        }}>
+
+        }}><TouchableHighlight
+          key={"h1"+i}
+          underlayColor="#ddd"
+          onPress={this._handlePressButton.bind( this, i*this.props.step)}
+
+
+          >
             <Text key={"t1"+i}
-                  style={[mainStyles.measureNumbers, measureNumbers]}>{i * this.props.step + this.props.minimumValue}</Text>
-            <View key={"v2"+i} style={[mainStyles.measureMarks, measureMarks]}
-              />
-          </View></TouchableHighlight>);
+                  style={[mainStyles.measureNumbers, measureNumbers]}>{i * this.props.step + this.props.minimumValue}</Text></TouchableHighlight>
+            <View key={"v2"+i} style={[mainStyles.measureMarks, measureMarks]}/>
+          </View>);
       }
     }
 
 
     return (
-      <View {...other} style={[mainStyles.container, style, {paddingTop:20}]} onLayout={this._measureContainer}>
+      <View {...other} style={[mainStyles.container, style, {marginTop:26}]} onLayout={this._measureContainer}>
 
         <View
           style={[{backgroundColor: maximumTrackTintColor}, mainStyles.track, trackStyle]}
@@ -248,8 +248,8 @@ var Slider = React.createClass({
           {debugTouchArea === true && this._renderDebugThumbTouchRect()}
         </View>
         {/* container for tickmarks*/}
-        <View style={[{ height: 16, marginLeft: -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2),
-         marginRight:  -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2), marginTop: -thumbSize.height, marginBottom: 10,flexDirection: "row",
+        <View style={[{ height: STEPS_HEIGHT, marginLeft: -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2),
+         marginRight:  -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2), marginTop: -(STEPS_HEIGHT+thumbSize.height/2+ TRACK_SIZE/4) , flexDirection: "row",
             alignItems: "flex-start", justifyContent: "space-between"}]}>{measures}</View>
       </View>
     );
@@ -421,6 +421,7 @@ var defaultStyles = StyleSheet.create({
   container: {
     height: 40,
     justifyContent: 'center',
+    backgroundColor:'blue',
   },
   track: {
     height: TRACK_SIZE,
