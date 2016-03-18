@@ -15,6 +15,7 @@ var TRACK_SIZE = 4;
 var THUMB_SIZE = 20;
 var STEPS_HEIGHT=15;
 
+
 function Rect(x, y, width, height) {
   this.x = x;
   this.y = y;
@@ -128,6 +129,7 @@ var Slider = React.createClass({
       trackSize: {width: 0, height: 0},
       thumbSize: {width: 0, height: 0},
 
+
       previousLeft: 0,
       value: this.props.value,
     };
@@ -194,6 +196,7 @@ var Slider = React.createClass({
     }
 
     var touchOverflowStyle = this._getTouchOverflowStyle();
+    var measureWidth;//= this._getMeasureWidth(trackSize.width, numberOfMeasures, thumbSize.width);
 
     /* generate step */
     var measures = [];
@@ -202,25 +205,29 @@ var Slider = React.createClass({
     // generate track marks
     {
       var numberOfMeasures = (this.props.maximumValue - this.props.minimumValue) / this.props.step;
+      measureWidth= this._getMeasureWidth(trackSize.width, numberOfMeasures, thumbSize.width);
       for (var i = 0; i <= numberOfMeasures; i++) {
         measures.push(
         <View key={"v1"+i} style={{
             height: STEPS_HEIGHT,
+
             alignItems: "center",
             flexDirection: "column",
 
-          width: trackSize.width/(numberOfMeasures+1),
+          width: measureWidth,
 
 
         }}><TouchableHighlight
           key={"h1"+i}
           underlayColor="#ddd"
-          onPress={this._handlePressButton.bind( this, i*this.props.step)}
+          onPress={this._handlePressButton.bind( this, i*this.props.step+ this.props.minimumValue)}
 
 
           >
+          <View style={{height:STEPS_HEIGHT, overflow:"hidden"}}>
             <Text key={"t1"+i}
-                  style={[mainStyles.measureNumbers, measureNumbers]}>{i * this.props.step + this.props.minimumValue}</Text></TouchableHighlight>
+                  style={[mainStyles.measureNumbers, measureNumbers]}>{i * this.props.step + this.props.minimumValue}</Text></View></TouchableHighlight>
+
             <View key={"v2"+i} style={[mainStyles.measureMarks, measureMarks]}/>
           </View>);
       }
@@ -248,11 +255,65 @@ var Slider = React.createClass({
           {debugTouchArea === true && this._renderDebugThumbTouchRect()}
         </View>
         {/* container for tickmarks*/}
-        <View style={[{ height: STEPS_HEIGHT, marginLeft: -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2),
-         marginRight:  -((trackSize.width/(numberOfMeasures+1))/2 - thumbSize.width/2), marginTop: -(STEPS_HEIGHT+thumbSize.height/2+ TRACK_SIZE/4) , flexDirection: "row",
-            alignItems: "flex-start", justifyContent: "space-between"}]}>{measures}</View>
+        <View style={[{ height: STEPS_HEIGHT,
+        marginLeft:  this._getMeasureTrackMargin('left', measureWidth, thumbSize.width, trackSize.width),
+         marginRight:  this._getMeasureTrackMargin('right', measureWidth, thumbSize.width, trackSize.width), marginTop: -(STEPS_HEIGHT+thumbSize.height/2+ TRACK_SIZE/4) ,
+         flexDirection: "row",
+          alignItems: "flex-start", justifyContent: "space-between"
+         }]}>{measures}</View>
       </View>
     );
+  },
+_getMeasureTrackMargin (type, measureWidth, thumbWidth)
+{
+
+  var result;
+  if (measureWidth >= thumbWidth) {
+
+    result =  (-1* (measureWidth/2-thumbWidth/2));
+  }
+  else
+  {
+    result =  thumbWidth / 2-measureWidth / 2;
+
+  }
+
+
+  //- thumbSize.width/2
+  console.log(type + "margin with measure width" + measureWidth+" measureTrackMargin"+ result);
+  return result;
+},
+  _getMeasureWidth(trackWidth, numberOfMeasures, thumbWidth)
+  {
+  //  console.log("width"+trackWidth/(numberOfMeasures+1) );
+   var measureWidth1 =  trackWidth/(numberOfMeasures+1);
+    var margin ;
+    if (measureWidth1 >= thumbWidth) {
+
+      margin = (-1* (measureWidth1 / 2 -thumbWidth/2));
+      console.log("THUMB"+ thumbWidth + " measureWidth1 "+measureWidth1+ "margin "+margin );
+    }
+    else
+    {
+
+      margin =  thumbWidth / 2-measureWidth1 / 2;
+
+    }
+
+   if (margin < 0) {
+     trackWidth = trackWidth - (margin * 2);
+
+     return trackWidth / (numberOfMeasures+1)
+   }
+    else
+   {
+     trackWidth = trackWidth- margin*2;
+
+
+      return trackWidth / (numberOfMeasures+1)
+    }
+
+
   },
 
 
@@ -363,8 +424,16 @@ var Slider = React.createClass({
     var touchOverflowStyle = {};
     if (width !== undefined && height !== undefined) {
       var verticalMargin = -height / 2;
+
       touchOverflowStyle.marginTop = verticalMargin;
       touchOverflowStyle.marginBottom = verticalMargin;
+
+      if (this.props.step)
+      {
+        touchOverflowStyle.marginTop  = verticalMargin + STEPS_HEIGHT;
+
+      }
+
 
       var horizontalMargin = -width / 2;
       touchOverflowStyle.marginLeft = horizontalMargin;
@@ -421,7 +490,7 @@ var defaultStyles = StyleSheet.create({
   container: {
     height: 40,
     justifyContent: 'center',
-    backgroundColor:'blue',
+
   },
   track: {
     height: TRACK_SIZE,
@@ -436,7 +505,7 @@ var defaultStyles = StyleSheet.create({
   touchArea: {
     position: 'absolute',
     backgroundColor: 'transparent',
-    top: 20,
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
@@ -448,7 +517,7 @@ var defaultStyles = StyleSheet.create({
   },
   measureNumbers: {
     textAlign: "center",
-    fontSize: 9
+    fontSize: 6
   },
 
   measureMarks: {
